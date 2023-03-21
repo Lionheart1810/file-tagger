@@ -78,10 +78,15 @@ def tmsu_tag(base, file, tags, untag=True):
 def walk(args):
     logger = logging.getLogger(__name__)
     logger.info("Walking files ...")
+
     mime = magic.Magic(mime=True)
     files = [os.path.abspath(os.path.join(dp, f)) for dp, dn, filenames in os.walk(args["base"]) for f in filenames]
     logger.debug("Files: {}".format(files))
     logger.info("Number of files found: {}".format(len(files)))
+
+    if args["index"] >= len(files):
+        logger.error("Invalid start index. index = {}, number of files = {}".format(args["index"], len(files)))
+        return
 
     if args["predict_images"]:
         from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input, decode_predictions
@@ -89,8 +94,9 @@ def walk(args):
         from tensorflow.keras.models import Model
         model = ResNet50(weights="imagenet")
 
-    for file_path in files:
-        logger.info("Handling file {}".format(file_path))
+    for i in range(args["index"], len(files)):
+        file_path = files[i]
+        logger.info("Handling file {}, {}".format(i, file_path))
         tags = tmsu_tags(args["base"], file_path)
         not_empty = bool(tags)
         logger.info("Existing tags: {}".format(tags))
@@ -120,7 +126,7 @@ def walk(args):
             if args["gui_tag"]:
                 while(True): # For GUI inputs (rotate, ...)
                     logger.debug("Showing image GUI ...")
-                    ret = GuiImage(img, tags).loop()
+                    ret = GuiImage(i, file_path, img, tags).loop()
                     tags = set(ret[1]).difference({''})
                     if ret[0] == GuiImage.RETURN_ROTATE_90_CLOCKWISE:
                         img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
@@ -134,7 +140,7 @@ def walk(args):
             if args["gui_tag"]:
                 while(True):
                     logger.debug("Showing generic tagging GUI ...")
-                    ret = GuiTag(file_path, tags).loop()
+                    ret = GuiTag(i, file_path, tags).loop()
                     tags = set(ret[1]).difference({''})
                     if ret[0] == GuiTag.RETURN_NEXT:
                         break
@@ -156,6 +162,7 @@ if __name__ == "__main__":
     parser.add_argument('--predict-images-top', nargs='?', const=1, default=10, type=int, help='Defines how many top prediction keywords should be used (default: %(default)s)')
     parser.add_argument('--gui-tag', nargs='?', const=1, default=False, type=bool, help='Show GUI for tagging (default: %(default)s)')
     parser.add_argument('--open-system', nargs='?', const=1, default=False, type=bool, help='Open all files with system default (default: %(default)s)')
+    parser.add_argument('-i', '--index', nargs='?', const=1, default=0, type=int, help='Start tagging at the given file index (default: %(default)s)')
     parser.add_argument('-v', '--verbose', action="count", default=0, help="Verbosity level")
     args = parser.parse_args()
 
@@ -176,6 +183,7 @@ if __name__ == "__main__":
         "predict_images_top": args.predict_images_top,
         "gui_tag": args.gui_tag,
         "open_system": args.open_system,
+        "index": args.index,
         "verbosity": args.verbose
     }
 
