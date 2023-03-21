@@ -112,7 +112,7 @@ def walk(args):
                     array = np.expand_dims(array_pre, axis=0)
                     array = preprocess_input(array)
                     predictions = model.predict(array)
-                    classes = decode_predictions(predictions, top=10)
+                    classes = decode_predictions(predictions, top=args["predict_images_top"])
                     logger.debug("Predicted image classes: {}".format(classes[0]))
                     tags.update([name for _, name, _ in classes[0]])
                     array_pre = cv2.rotate(array_pre, cv2.ROTATE_90_CLOCKWISE)
@@ -153,6 +153,7 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--base', nargs='?', default='./test', type=dir_path, help='Base directory for walking (default: %(default)s)')
     parser.add_argument('-g', '--gui', nargs='?', const=1, default=False, type=bool, help='Show main GUI (default: %(default)s)')
     parser.add_argument('--predict-images', nargs='?', const=1, default=False, type=bool, help='Use prediction for image tagging (default: %(default)s)')
+    parser.add_argument('--predict-images-top', nargs='?', const=1, default=10, type=int, help='Defines how many top prediction keywords should be used (default: %(default)s)')
     parser.add_argument('--gui-tag', nargs='?', const=1, default=False, type=bool, help='Show GUI for tagging (default: %(default)s)')
     parser.add_argument('--open-system', nargs='?', const=1, default=False, type=bool, help='Open all files with system default (default: %(default)s)')
     parser.add_argument('-v', '--verbose', action="count", default=0, help="Verbosity level")
@@ -172,6 +173,7 @@ if __name__ == "__main__":
         "base": args.base,
         "gui": args.gui,
         "predict_images": args.predict_images,
+        "predict_images_top": args.predict_images_top,
         "gui_tag": args.gui_tag,
         "open_system": args.open_system,
         "verbosity": args.verbose

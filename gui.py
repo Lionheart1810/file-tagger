@@ -11,22 +11,28 @@ class GuiMain(object):
         self.__args = args
         self.__base = StringVar(self.__master, value=args["base"])
         self.__predict_images = BooleanVar(self.__master, value=args["predict_images"])
+        self.__predict_images_top = StringVar(self.__master, value=str(args["predict_images_top"]))
         self.__gui_tag = BooleanVar(self.__master, value=args["gui_tag"])
         self.__open_system = BooleanVar(self.__master, value=args["open_system"])
+
+        validate_number = (self.__master.register(self.__validate_number))
 
         Label(self.__master, text="Base directory for walking:").grid(row=0, column=0)
         Entry(self.__master, textvariable=self.__base).grid(row=0, column=1, columnspan=2)
         Button(self.__master, text="Browse", command=self.__browse).grid(row=0, column=3)
         Checkbutton(self.__master, text="Use prediction for image tagging", variable=self.__predict_images).grid(row=1, column=0, columnspan=4, sticky=W)
-        Checkbutton(self.__master, text="Show GUI for tagging", variable=self.__gui_tag).grid(row=2, column=0, columnspan=4, sticky=W)
-        Checkbutton(self.__master, text="Open all files with system default", variable=self.__open_system).grid(row=3, column=0, columnspan=4, sticky=W)
-        Button(self.__master, text="Start", command=self.__master.destroy).grid(row=4, column=0, columnspan=4)
+        Label(self.__master, text="Number of top results:").grid(row=2, column=0)
+        Entry(self.__master, textvariable=self.__predict_images_top, validate='all', validatecommand=(validate_number, '%P')).grid(row=2, column=1, columnspan=1)
+        Checkbutton(self.__master, text="Show GUI for tagging", variable=self.__gui_tag).grid(row=3, column=0, columnspan=4, sticky=W)
+        Checkbutton(self.__master, text="Open all files with system default", variable=self.__open_system).grid(row=4, column=0, columnspan=4, sticky=W)
+        Button(self.__master, text="Start", command=self.__master.destroy).grid(row=5, column=0, columnspan=4)
 
     def loop(self):
         self.__master.mainloop()
 
         self.__args["base"] = self.__base.get()
         self.__args["predict_images"] = self.__predict_images.get()
+        self.__args["predict_images_top"] = int(self.__predict_images_top.get())
         self.__args["gui_tag"] = self.__gui_tag.get()
         self.__args["open_system"] = self.__open_system.get()
         return self.__args
@@ -34,6 +40,12 @@ class GuiMain(object):
     def __browse(self):
         filename = filedialog.askdirectory()
         self.__base.set(filename)
+
+    def __validate_number(self, P):
+        if str.isdigit(P) or P == "":
+            return True
+        else:
+            return False
 
 class GuiTag(object):
     RETURN_NEXT = 0
