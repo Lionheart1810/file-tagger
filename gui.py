@@ -82,8 +82,10 @@ class GuiImage(object):
         self.__ret = self.RETURN_NEXT
         self.__master = Tk()
         self.__tags = StringVar(self.__master, value=','.join(tags))
-        self.__image = ImageTk.PhotoImage(image=Image.fromarray(img).convert('RGB'))
-        Label(self.__master, width=800, height=800, image=self.__image).grid(row=0, column=0, columnspan=4)
+        self.__image_pil = Image.fromarray(img)
+        self.__image = ImageTk.PhotoImage(image=self.__image_pil)
+        self.__label = Label(self.__master, width=800, height=800, image=self.__image)
+        self.__label.grid(row=0, column=0, columnspan=4)
         Entry(self.__master, textvariable=self.__tags).grid(row=1, column=0, columnspan=4, sticky="we")
         Button(self.__master, text="↺", command=self.__handle_rotate_90_counterclockwise).grid(row=2, column=0)
         Button(self.__master, text="↻", command=self.__handle_rotate_90_clockwise).grid(row=2, column=1)
@@ -95,12 +97,14 @@ class GuiImage(object):
         return (self.__ret, self.__tags.get().split(","))
 
     def __handle_rotate_90_counterclockwise(self):
-        self.__ret = self.RETURN_ROTATE_90_COUNTERCLOCKWISE
-        self.__master.destroy()
+        self.__image_pil = self.__image_pil.rotate(90)
+        self.__image = ImageTk.PhotoImage(image=self.__image_pil)
+        self.__label.config(image=self.__image)
     
     def __handle_rotate_90_clockwise(self):
-        self.__ret = self.RETURN_ROTATE_90_CLOCKWISE
-        self.__master.destroy()
+        self.__image_pil = self.__image_pil.rotate(-90)
+        self.__image = ImageTk.PhotoImage(image=self.__image_pil)
+        self.__label.config(image=self.__image)
 
     def __handle_next(self):
         self.__ret = self.RETURN_NEXT
