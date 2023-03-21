@@ -10,6 +10,13 @@ import re
 import platform
 import readline
 
+'''
+Fetch input prompt with prefilled text.
+
+Parameters:
+prompt: Prompt message.
+text: Prefilled input.
+'''
 def input_with_prefill(prompt, text):
     def hook():
         readline.insert_text(text)
@@ -19,12 +26,24 @@ def input_with_prefill(prompt, text):
     readline.set_pre_input_hook()
     return result
 
+'''
+Checks if the given string is a valid path.
+
+Parameters:
+string: String to be checked.
+'''
 def dir_path(string):
     if os.path.isdir(string):
         return string
     else:
         raise NotADirectoryError(string)
 
+'''
+Opens the given file with the platform default handler.
+
+Parameters:
+file: Path to the file.
+'''
 def open_system(file):
     if platform.system() == 'Darwin':       # macOS
         subprocess.call(('open', file))
@@ -33,6 +52,13 @@ def open_system(file):
     else:                                   # linux variants
         subprocess.call(('xdg-open', file))
 
+'''
+Initializes TMSU in a given directory.
+Does nothing, if it is already initialized.
+
+Parameters:
+base: Directory to initialize.
+'''
 def tmsu_init(base):
     logger = logging.getLogger(__name__)
     if not os.path.exists(os.path.join(base, ".tmsu")):
@@ -45,6 +71,13 @@ def tmsu_init(base):
             return False
     return True
 
+'''
+Reads the tags for the specified file.
+
+Parameters:
+base: Base directory for the database.
+file: File to get the tags for.
+'''
 def tmsu_tags(base, file):
     logger = logging.getLogger(__name__)
     logger.debug("Getting existing tags for file {}".format(file))
@@ -58,6 +91,15 @@ def tmsu_tags(base, file):
         logger.error("Could not get tags for file {}".format(file))
     return tags
 
+'''
+Sets tags for the specified file.
+
+Parameters:
+base: Base directory for the database.
+file: File to set the tags for.
+tags: Tags to set.
+untag: If True, it will remove all existing tags first. If False, it will just append new tags.
+'''
 def tmsu_tag(base, file, tags, untag=True):
     logger = logging.getLogger(__name__)
     if untag:
@@ -75,6 +117,12 @@ def tmsu_tag(base, file, tags, untag=True):
     else:
         logger.info("Tags are empty, ignoring")
 
+'''
+Walk over all files for the given base directory and all subdirectories recursively.
+
+Parameters:
+args: Argument dict.
+'''
 def walk(args):
     logger = logging.getLogger(__name__)
     logger.info("Walking files ...")
@@ -104,8 +152,10 @@ def walk(args):
         if args["open_system"]:
             open_system(file_path)
 
+        # Detect MIME-type for file
         mime_type = mime.from_file(file_path)
 
+        # Handle images
         if mime_type.split("/")[0] == "image":
             logger.debug("File is image")
             img = cv2.imread(file_path)
