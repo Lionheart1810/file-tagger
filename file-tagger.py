@@ -82,7 +82,7 @@ def tmsu_tags(base, file):
     logger = logging.getLogger(__name__)
     logger.debug("Getting existing tags for file {}".format(file))
     tags = set()
-    proc = subprocess.Popen(["tmsu", "tags", file], cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(["tmsu", "tags", os.path.relpath(file, base)], cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     proc.wait()
     logger.debug("TMSU returncode: {}".format(proc.returncode))
     if proc.returncode == 0:
@@ -104,13 +104,13 @@ def tmsu_tag(base, file, tags, untag=True):
     logger = logging.getLogger(__name__)
     if untag:
         logger.debug("Untagging file")
-        proc = subprocess.Popen(["tmsu", "untag", "--all", file], cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(["tmsu", "untag", "--all", os.path.relpath(file, base)], cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         proc.wait()
         if proc.returncode != 0:
             logger.error("Could not untag file {}".format(file))
     if tags:
         logger.debug("Writing tags {}".format(tags))
-        proc = subprocess.Popen(["tmsu", "tag", file] + list(tags), cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(["tmsu", "tag", os.path.relpath(file, base)] + list(tags), cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         proc.wait()
         if proc.returncode != 0:
             logger.error("Could not write tags to file {}".format(file))
