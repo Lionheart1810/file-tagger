@@ -86,7 +86,9 @@ def tmsu_tags(base, file):
     proc.wait()
     logger.debug("TMSU returncode: {}".format(proc.returncode))
     if proc.returncode == 0:
-        tags.update(re.split("\s", proc.stdout.read().decode())[1:-1])
+        ret = proc.stdout.read().decode()
+        logger.debug("Raw TMSU tags: {}".format(ret))
+        tags.update(re.split("\s", ret.split(":")[1])[1:-1])
     else:
         logger.error("Could not get tags for file {}".format(file))
     return tags
