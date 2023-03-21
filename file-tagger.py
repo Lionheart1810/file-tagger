@@ -63,7 +63,7 @@ def tmsu_init(base):
     logger = logging.getLogger(__name__)
     if not os.path.exists(os.path.join(base, ".tmsu")):
         logger.info("TMSU database does not exist, creating ...")
-        proc = Popen(["tmsu", "init"], cwd=base)
+        proc = subprocess.Popen(["tmsu", "init"], cwd=base)
         proc.wait()
         logger.debug("TMSU returncode: {}".format(proc.returncode))
         if proc.returncode != 0:
@@ -128,7 +128,7 @@ def walk(args):
     logger.info("Walking files ...")
 
     mime = magic.Magic(mime=True)
-    files = [os.path.abspath(os.path.join(dp, f)) for dp, dn, filenames in os.walk(args["base"]) for f in filenames]
+    files = [os.path.abspath(os.path.join(dp, f)) for dp, dn, filenames in os.walk(args["file_dir"]) for f in filenames]
     logger.debug("Files: {}".format(files))
     logger.info("Number of files found: {}".format(len(files)))
 
@@ -206,7 +206,8 @@ def walk(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tag multiple files using TMSU.')
-    parser.add_argument('-b', '--base', nargs='?', default='./test', type=dir_path, help='Base directory for walking (default: %(default)s)')
+    parser.add_argument('-b', '--base', nargs='?', default='.', type=dir_path, help='Base directory with database (default: %(default)s)')
+    parser.add_argument('-f', '--file-dir', nargs='?', default='.', type=dir_path, help='File directory for walking (default: %(default)s)')
     parser.add_argument('-g', '--gui', nargs='?', const=1, default=False, type=bool, help='Show main GUI (default: %(default)s)')
     parser.add_argument('--predict-images', nargs='?', const=1, default=False, type=bool, help='Use prediction for image tagging (default: %(default)s)')
     parser.add_argument('--predict-images-top', nargs='?', const=1, default=10, type=int, help='Defines how many top prediction keywords should be used (default: %(default)s)')
@@ -228,6 +229,7 @@ if __name__ == "__main__":
 
     args = {
         "base": args.base,
+        "file_dir": args.file_dir,
         "gui": args.gui,
         "predict_images": args.predict_images,
         "predict_images_top": args.predict_images_top,

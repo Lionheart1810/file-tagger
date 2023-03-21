@@ -11,6 +11,7 @@ class GuiMain(object):
         self.__master.title("file-tagger")
         self.__args = args
         self.__base = StringVar(self.__master, value=args["base"])
+        self.__file_dir = StringVar(self.__master, value=args["file_dir"])
         self.__predict_images = BooleanVar(self.__master, value=args["predict_images"])
         self.__predict_images_top = StringVar(self.__master, value=str(args["predict_images_top"]))
         self.__gui_tag = BooleanVar(self.__master, value=args["gui_tag"])
@@ -19,22 +20,26 @@ class GuiMain(object):
 
         validate_number = (self.__master.register(self.__validate_number))
 
-        Label(self.__master, text="Base directory for walking:").grid(row=0, column=0)
+        Label(self.__master, text="Base directory with database:").grid(row=0, column=0)
         Entry(self.__master, textvariable=self.__base).grid(row=0, column=1, columnspan=2)
-        Button(self.__master, text="Browse", command=self.__browse).grid(row=0, column=3)
-        Checkbutton(self.__master, text="Use prediction for image tagging", variable=self.__predict_images).grid(row=1, column=0, columnspan=4, sticky=W)
-        Label(self.__master, text="Number of top results:").grid(row=2, column=0)
-        Entry(self.__master, textvariable=self.__predict_images_top, validate='all', validatecommand=(validate_number, '%P')).grid(row=2, column=1, columnspan=1)
-        Checkbutton(self.__master, text="Show GUI for tagging", variable=self.__gui_tag).grid(row=3, column=0, columnspan=4, sticky=W)
-        Checkbutton(self.__master, text="Open all files with system default", variable=self.__open_system).grid(row=4, column=0, columnspan=4, sticky=W)
-        Label(self.__master, text="Start at index:").grid(row=5, column=0)
-        Entry(self.__master, textvariable=self.__index, validate='all', validatecommand=(validate_number, '%P')).grid(row=5, column=1, columnspan=1)
-        Button(self.__master, text="Start", command=self.__master.destroy).grid(row=6, column=0, columnspan=4)
+        Button(self.__master, text="Browse", command=lambda: self.__browse(self.__base)).grid(row=0, column=3)
+        Label(self.__master, text="File directory for walking:").grid(row=1, column=0)
+        Entry(self.__master, textvariable=self.__file_dir).grid(row=1, column=1, columnspan=2)
+        Button(self.__master, text="Browse", command=lambda: self.__browse(self.__file_dir)).grid(row=1, column=3)
+        Checkbutton(self.__master, text="Use prediction for image tagging", variable=self.__predict_images).grid(row=2, column=0, columnspan=4, sticky=W)
+        Label(self.__master, text="Number of top results:").grid(row=3, column=0)
+        Entry(self.__master, textvariable=self.__predict_images_top, validate='all', validatecommand=(validate_number, '%P')).grid(row=3, column=1, columnspan=1)
+        Checkbutton(self.__master, text="Show GUI for tagging", variable=self.__gui_tag).grid(row=4, column=0, columnspan=4, sticky=W)
+        Checkbutton(self.__master, text="Open all files with system default", variable=self.__open_system).grid(row=5, column=0, columnspan=4, sticky=W)
+        Label(self.__master, text="Start at index:").grid(row=6, column=0)
+        Entry(self.__master, textvariable=self.__index, validate='all', validatecommand=(validate_number, '%P')).grid(row=6, column=1, columnspan=1)
+        Button(self.__master, text="Start", command=self.__master.destroy).grid(row=7, column=0, columnspan=4)
 
     def loop(self):
         self.__master.mainloop()
 
         self.__args["base"] = self.__base.get()
+        self.__args["file_dir"] = self.__file_dir.get()
         self.__args["predict_images"] = self.__predict_images.get()
         self.__args["predict_images_top"] = int(self.__predict_images_top.get())
         self.__args["gui_tag"] = self.__gui_tag.get()
@@ -42,9 +47,9 @@ class GuiMain(object):
         self.__args["index"] = int(self.__index.get())
         return self.__args
 
-    def __browse(self):
+    def __browse(self, filepath):
         filename = filedialog.askdirectory()
-        self.__base.set(filename)
+        filepath.set(filename)
 
     def __validate_number(self, P):
         if str.isdigit(P) or P == "":
