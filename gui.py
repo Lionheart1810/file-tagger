@@ -8,6 +8,7 @@ class GuiMain(object):
 
     def __init__(self, args):
         self.__master = Tk()
+        self.__master.title("file-tagger")
         self.__args = args
         self.__base = StringVar(self.__master, value=args["base"])
         self.__predict_images = BooleanVar(self.__master, value=args["predict_images"])
@@ -58,6 +59,7 @@ class GuiTag(object):
     def __init__(self, index, file, tags):
         self.__ret = self.RETURN_NEXT
         self.__master = Tk()
+        self.__master.title("Tag file {}".format(file))
         self.__tags = StringVar(self.__master, value=','.join(tags))
         Label(self.__master, text="Index: {}".format(index)).grid(row=0, column=0, columnspan=2)
         Label(self.__master, text="File: {}".format(file)).grid(row=1, column=0, columnspan=2)
@@ -86,6 +88,7 @@ class GuiImage(object):
     def __init__(self, index, file, img, tags):
         self.__ret = self.RETURN_NEXT
         self.__master = Tk()
+        self.__master.title("Tag file {}".format(file))
         self.__tags = StringVar(self.__master, value=','.join(tags))
         self.__image_pil = Image.fromarray(img)
         self.__image = ImageTk.PhotoImage(image=self.__image_pil)
