@@ -1,18 +1,37 @@
 import numpy as np
 import argparse
 import os, sys
-from gui import GuiMain, GuiImage
+from gui import GuiMain, GuiImage, GuiTag
 import cv2
 import logging
 import magic
-from subprocess import Popen, PIPE
+import subprocess
 import re
+import platform
+import readline
+
+def input_with_prefill(prompt, text):
+    def hook():
+        readline.insert_text(text)
+        readline.redisplay()
+    readline.set_pre_input_hook(hook)
+    result = input(prompt)
+    readline.set_pre_input_hook()
+    return result
 
 def dir_path(string):
     if os.path.isdir(string):
         return string
     else:
         raise NotADirectoryError(string)
+
+def open_system(file):
+    if platform.system() == 'Darwin':       # macOS
+        subprocess.call(('open', file))
+    elif platform.system() == 'Windows':    # Windows
+        os.startfile(file)
+    else:                                   # linux variants
+        subprocess.call(('xdg-open', file))
 
 def tmsu_init(base):
     logger = logging.getLogger(__name__)
@@ -30,7 +49,7 @@ def tmsu_tags(base, file):
     logger = logging.getLogger(__name__)
     logger.debug("Getting existing tags for file {}".format(file))
     tags = set()
-    proc = Popen(["tmsu", "tags", file], cwd=base, stdout=PIPE, stderr=PIPE)
+    proc = subprocess.Popen(["tmsu", "tags", file], cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     proc.wait()
     logger.debug("TMSU returncode: {}".format(proc.returncode))
     if proc.returncode == 0:
@@ -43,13 +62,13 @@ def tmsu_tag(base, file, tags, untag=True):
     logger = logging.getLogger(__name__)
     if untag:
         logger.debug("Untagging file")
-        proc = Popen(["tmsu", "untag", "--all", file], cwd=base, stdout=PIPE, stderr=PIPE)
+        proc = subprocess.Popen(["tmsu", "untag", "--all", file], cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         proc.wait()
         if proc.returncode != 0:
             logger.error("Could not untag file {}".format(file))
     if tags:
         logger.debug("Writing tags {}".format(tags))
-        proc = Popen(["tmsu", "tag", file] + list(tags), cwd=base, stdout=PIPE, stderr=PIPE)
+        proc = subprocess.Popen(["tmsu", "tag", file] + list(tags), cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         proc.wait()
         if proc.returncode != 0:
             logger.error("Could not write tags to file {}".format(file))
@@ -75,24 +94,31 @@ def walk(args):
         tags = tmsu_tags(args["base"], file_path)
         not_empty = bool(tags)
         logger.info("Existing tags: {}".format(tags))
+
+        if args["open_system"]:
+            open_system(file_path)
+
         mime_type = mime.from_file(file_path)
+
         if mime_type.split("/")[0] == "image":
             logger.debug("File is image")
             img = cv2.imread(file_path)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             img = cv2.resize(img, dsize=(800, 800), interpolation=cv2.INTER_CUBIC)
-            while(True):
-                if args["predict_images"]:
-                    logger.info("Predicting image tags ...")
-                    array = cv2.resize(img, dsize=(224, 224), interpolation=cv2.INTER_CUBIC)
-                    array = np.expand_dims(array, axis=0)
+            if args["predict_images"]:
+                logger.info("Predicting image tags ...")
+                array_pre = cv2.resize(img, dsize=(224, 224), interpolation=cv2.INTER_CUBIC)
+                for _ in range(4):
+                    array = np.expand_dims(array_pre, axis=0)
                     array = preprocess_input(array)
                     predictions = model.predict(array)
                     classes = decode_predictions(predictions, top=10)
                     logger.debug("Predicted image classes: {}".format(classes[0]))
                     tags.update([name for _, name, _ in classes[0]])
-                    logger.info("Predicted tags: {}".format(tags))
-                if args["gui_images"]:
+                    array_pre = cv2.rotate(array_pre, cv2.ROTATE_90_CLOCKWISE)
+                logger.info("Predicted tags: {}".format(tags))
+            if args["gui_tag"]:
+                while(True): # For GUI inputs (rotate, ...)
                     logger.debug("Showing image GUI ...")
                     ret = GuiImage(img, tags).loop()
                     tags = set(ret[1]).difference({''})
@@ -104,8 +130,20 @@ def walk(args):
                         break
                     elif ret[0] == GuiImage.RETURN_ABORT:
                         return
-                    continue
-                break
+        else:
+            if args["gui_tag"]:
+                while(True):
+                    logger.debug("Showing generic tagging GUI ...")
+                    ret = GuiTag(file_path, tags).loop()
+                    tags = set(ret[1]).difference({''})
+                    if ret[0] == GuiTag.RETURN_NEXT:
+                        break
+                    elif ret[0] == GuiTag.RETURN_ABORT:
+                        return
+
+        if not args["gui_tag"]:
+            tags = set(input_with_prefill("\nTags for file {}:\n".format(file_path), ','.join(tags)).split(","))
+
         logger.info("Tagging {}".format(tags))
         tmsu_tag(args["base"], file_path, tags, untag=not_empty)
 
@@ -115,10 +153,8 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--base', nargs='?', default='./test', type=dir_path, help='Base directory for walking (default: %(default)s)')
     parser.add_argument('-g', '--gui', nargs='?', const=1, default=False, type=bool, help='Show main GUI (default: %(default)s)')
     parser.add_argument('--predict-images', nargs='?', const=1, default=False, type=bool, help='Use prediction for image tagging (default: %(default)s)')
-    parser.add_argument('--gui-images', nargs='?', const=1, default=False, type=bool, help='Show GUI for image tagging (default: %(default)s)')
-    parser.add_argument('--gui-audio', nargs='?', const=1, default=False, type=bool, help='Show GUI for audio tagging (default: %(default)s)')
-    parser.add_argument('--gui-video', nargs='?', const=1, default=False, type=bool, help='Show GUI for video tagging (default: %(default)s)')
-    parser.add_argument('--open-all', nargs='?', const=1, default=False, type=bool, help='Open all files with system default (default: %(default)s)')
+    parser.add_argument('--gui-tag', nargs='?', const=1, default=False, type=bool, help='Show GUI for tagging (default: %(default)s)')
+    parser.add_argument('--open-system', nargs='?', const=1, default=False, type=bool, help='Open all files with system default (default: %(default)s)')
     parser.add_argument('-v', '--verbose', action="count", default=0, help="Verbosity level")
     args = parser.parse_args()
 
@@ -136,10 +172,8 @@ if __name__ == "__main__":
         "base": args.base,
         "gui": args.gui,
         "predict_images": args.predict_images,
-        "gui_images": args.gui_images,
-        "gui_audio": args.gui_audio,
-        "gui_video": args.gui_video,
-        "open_all": args.open_all,
+        "gui_tag": args.gui_tag,
+        "open_system": args.open_system,
         "verbosity": args.verbose
     }
 
